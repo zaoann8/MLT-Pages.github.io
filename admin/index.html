@@ -12047,7 +12047,37 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 if (resultData && times.length > 0) {
                     const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
                     resultData.avgTime = Math.round(avgTime);
-                    console.debug(`[在线优选] IP ${ip}:${port} 测试成功 - 平均响应: ${resultData.avgTime}ms, colo: ${resultData.colo}`);
+                    console.debug(`[在线优选] IP ${ip}:${port} 延迟测试完成 - 平均响应: ${resultData.avgTime}ms, colo: ${resultData.colo}`);
+                    
+                    // 顺带尝试从 ipapi.is 快速拿取真实的国家属地与宽带类型（加2秒超时避免严重阻塞）
+                    try {
+                        const ipapiRes = await fetch(`https://api.ipapi.is/?q=${ip}`, {
+                            signal: AbortSignal.timeout(2000)
+                        });
+                        if (ipapiRes.ok) {
+                            const data = await ipapiRes.json();
+                            if (data && data.ip) {
+                                resultData.realCountry = data.location && data.location.country_code ? data.location.country_code : '';
+                                
+                                const isDatacenter = data.is_datacenter === true;
+                                const asnType = data.asn ? data.asn.type : '';
+                                if (isDatacenter) {
+                                    resultData.preTypeStr = '机房 IP';
+                                } else {
+                                    if (asnType === 'residential' || asnType === 'consumer') {
+                                        resultData.preTypeStr = '家庭宽带';
+                                    } else if (asnType === 'business' || asnType === 'commercial') {
+                                        resultData.preTypeStr = '商业宽带';
+                                    } else {
+                                        resultData.preTypeStr = '普通线路';
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // 忽略获取归属地超时或错误，不阻碍测速主流程
+                    }
+
                     return resultData;
                 }
 
@@ -12089,9 +12119,12 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             for (const result of results) {
                 if (!result.colo) continue;
 
-                // 通过colo查找国家编码
-                const location = locationsData.find(loc => loc.iata === result.colo);
-                const countryCode = location ? location.cca2 : result.colo;
+                // 使用节点数据中自带的最准确的真理属地 countryCode（如果不存在则回退至通过 colo 查到的基础位置）
+                let countryCode = result.realCountry;
+                if (!countryCode) {
+                    const location = locationsData.find(loc => loc.iata === result.colo);
+                    countryCode = location ? location.cca2 : result.colo;
+                }
 
                 if (!optimizeResults[countryCode]) {
                     optimizeResults[countryCode] = [];
@@ -12277,20 +12310,9 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                             const realCountry = data.location && data.location.country_code ? data.location.country_code : '?';
                             const displayScore = typeof fraudScore === 'number' ? fraudScore.toFixed(0) : 0;
                             
-                            // 动态纠正该节点的真实物理属地名称和 Emoji（原先仅由 COLO 决定，不符合实际情况）
-                            let finalRemark = r.remark;
-                            if (realCountry !== '?') {
-                                const realFlagEmoji = getFlagEmoji(realCountry);
-                                // 正则匹配原本类似 "🇺🇸 US " 或者 "🌐 XX " 这样基于 COLO 自动生成的头部字符串
-                                const oldPrefixRegex = /^.+?\s[A-Z0-9-]+\s/;
-                                if (oldPrefixRegex.test(finalRemark)) {
-                                    finalRemark = finalRemark.replace(oldPrefixRegex, `${realFlagEmoji} ${realCountry} `);
-                                }
-                            }
-
                             // 将 IP 类型拼接到节点名称 (remark) 中，避免重复添加
                             if (!r.typeStrAppended) {
-                                r.remark = finalRemark + " " + typeStr;
+                                r.remark = r.remark + " " + typeStr;
                                 r.typeStrAppended = true;
                                 // 同步更新界面上显示的节点名称
                                 const infoSpan = document.getElementById(`ip-info-${country}-${index}`);
