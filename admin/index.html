@@ -12065,6 +12065,16 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             }).join('');
         }
 
+        // 国家代码转Emoji国旗
+        function getFlagEmoji(countryCode) {
+            if (!countryCode || countryCode.length !== 2) return '🌐';
+            const codePoints = countryCode
+                .toUpperCase()
+                .split('')
+                .map(char => 127397 + char.charCodeAt(0));
+            return String.fromCodePoint(...codePoints);
+        }
+
         // 分类结果
         function classifyResults(results) {
             console.log('[在线优选] 开始: 分类结果');
@@ -12087,10 +12097,14 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     optimizeResults[countryCode] = [];
                 }
 
+                const flagEmoji = getFlagEmoji(countryCode);
+                const customRemark = result.remark ? result.remark : `${countryCode}`;
+                const finalRemark = `${flagEmoji} ${customRemark}`;
+
                 optimizeResults[countryCode].push({
                     ip: result.ip,
                     port: result.port,
-                    remark: result.remark || countryCode,
+                    remark: finalRemark,
                     type: type,
                     time: result.avgTime
                 });
