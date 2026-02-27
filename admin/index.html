@@ -12131,8 +12131,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 }
 
                 const flagEmoji = getFlagEmoji(countryCode);
-                const customRemark = result.remark ? result.remark : `${countryCode}`;
-                const finalRemark = `${flagEmoji} ${customRemark}`;
+                const finalRemark = result.remark ? `${result.remark} ${flagEmoji} ${countryCode}` : `${flagEmoji} ${countryCode}`;
 
                 optimizeResults[countryCode].push({
                     ip: result.ip,
@@ -12312,7 +12311,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                             
                             // 将 IP 类型拼接到节点名称 (remark) 中，避免重复添加
                             if (!r.typeStrAppended) {
-                                r.remark = r.remark + " " + typeStr;
+                                r.remark = r.remark + " " + r.type + " " + typeStr;
                                 r.typeStrAppended = true;
                                 // 同步更新界面上显示的节点名称
                                 const infoSpan = document.getElementById(`ip-info-${country}-${index}`);
