@@ -8627,40 +8627,46 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
         }
 
         function updateButtonStates() {
+            // 辅助函数，安全设置disabled属性
+            const setDisabled = (id, disabled) => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = disabled;
+            };
+
             // 订阅生成模块
             const subModified = modifiedSections.has('sub');
-            document.getElementById('saveSubBtn').disabled = !subModified;
-            document.getElementById('cancelSubBtn').disabled = !subModified;
+            setDisabled('saveSubBtn', !subModified);
+            setDisabled('cancelSubBtn', !subModified);
 
             // 配置信息模块
             const configModified = modifiedSections.has('config');
-            document.getElementById('saveConfigBtn').disabled = !configModified;
-            document.getElementById('cancelConfigBtn').disabled = !configModified;
+            setDisabled('saveConfigBtn', !configModified);
+            setDisabled('cancelConfigBtn', !configModified);
 
             // ECH设置模块
             const echModified = modifiedSections.has('ech');
-            document.getElementById('saveEchBtn').disabled = !echModified;
-            document.getElementById('cancelEchBtn').disabled = !echModified;
+            setDisabled('saveEchBtn', !echModified);
+            setDisabled('cancelEchBtn', !echModified);
 
             // 反代设置模块
             const proxyModified = modifiedSections.has('proxy');
-            document.getElementById('saveProxyBtn').disabled = !proxyModified;
-            document.getElementById('cancelProxyBtn').disabled = !proxyModified;
+            setDisabled('saveProxyBtn', !proxyModified);
+            setDisabled('cancelProxyBtn', !proxyModified);
 
             // 订阅转换模块
             const convertModified = modifiedSections.has('convert');
-            document.getElementById('saveConvertBtn').disabled = !convertModified;
-            document.getElementById('cancelConvertBtn').disabled = !convertModified;
+            setDisabled('saveConvertBtn', !convertModified);
+            setDisabled('cancelConvertBtn', !convertModified);
 
             // 通知设置模块
             const notificationModified = modifiedSections.has('notification');
-            document.getElementById('saveNotificationBtn').disabled = !notificationModified;
-            document.getElementById('cancelNotificationBtn').disabled = !notificationModified;
+            setDisabled('saveNotificationBtn', !notificationModified);
+            setDisabled('cancelNotificationBtn', !notificationModified);
         }
 
         function resetAllButtons() {
-            document.querySelectorAll('[id^="save"]').forEach(btn => btn.disabled = true);
-            document.querySelectorAll('[id^="cancel"]').forEach(btn => btn.disabled = true);
+            document.querySelectorAll('[id^="save"]').forEach(btn => { if(btn) btn.disabled = true; });
+            document.querySelectorAll('[id^="cancel"]').forEach(btn => { if(btn) btn.disabled = true; });
         }
 
         function copySubscription(elementId) {
