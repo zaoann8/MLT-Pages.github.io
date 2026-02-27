@@ -6365,6 +6365,13 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                         class="optimize-concurrency-input" placeholder="1-32" oninput="validateConcurrency(this)"
                         onchange="validateConcurrency(this)">
                 </div>
+
+                <div class="form-group" style="align-items: center; justify-content: flex-end; width: 100%;">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="cnNetworkOnly" title="开启就只能在 CN 网络优选，关闭就不限制网络环境" checked>
+                        <label for="cnNetworkOnly" class="checkbox-label" title="开启就只能在 CN 网络优选，关闭就不限制网络">仅在 CN 网络优选</label>
+                    </div>
+                </div>
             </div>
 
             <!-- 进度条 -->
@@ -11518,10 +11525,20 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
                 if (loc !== 'CN') {
                     console.warn('[在线优选] 警告: 检测到非CN地区访问，可能处于代理/VPN环境');
-                    html += `<div class="ip-detection-warning" style="font-size: 16px; font-weight: 700; color: #dc2626; margin-top: 12px; line-height: 1.6;">⚠️ 检测到您当前很可能处于代理/VPN环境中！请确保处于直连网络环境下再进行在线优选，否则优选测试结果将因为不准确变得毫无意义！</div>`;
-                    // 非CN地区，禁用开始优选按钮
-                    btnStart.disabled = true;
-                    btnStart.textContent = '仅限CN地区';
+                    html += `<div class="ip-detection-warning" style="font-size: 16px; font-weight: 700; color: #dc2626; margin-top: 12px; line-height: 1.6;">⚠️ 检测到您当前很可能处于代理/VPN环境中！</div>`;
+                    
+                    const cnOnlyEl = document.getElementById('cnNetworkOnly');
+                    if (cnOnlyEl && cnOnlyEl.checked) {
+                        // 如果开启了仅在 CN 网络优选，则禁用按钮
+                        btnStart.disabled = true;
+                        btnStart.textContent = '仅限CN地区';
+                        console.log('[在线优选] 拦截: 非 CN 地区且开启了强制 CN 检查');
+                    } else {
+                        // 如果关闭了限制，则允许继续
+                        btnStart.disabled = false;
+                        btnStart.textContent = '强制开始优选';
+                        html += `<div style="color: #f59e0b; margin-top: 5px;">*您已关闭 CN 限制限制网络，本次测速可能不准确。</div>`;
+                    }
                 } else {
                     // CN地区，启用开始优选按钮
                     btnStart.disabled = false;
@@ -12135,8 +12152,8 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             showCountryResults(country);
         }
 
-        // 显示国家结果
-        function showCountryResults(country, showAll = false) {
+        // 显示国家结果并在背后并发加载 IP 纯净度
+        async function showCountryResults(country, showAll = false) {
             const contentContainer = document.getElementById('optimizeResultsContent');
             const results = optimizeResults[country] || [];
 
@@ -12149,8 +12166,8 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             const displayCount = showAll ? results.length : Math.min(16, results.length);
             const displayResults = results.slice(0, displayCount);
 
-            const html = displayResults.map(r => {
-                // 根据延迟时间确定颜色
+            // 第一阶段渲染：画出含占位符的框架，此时不阻塞渲染
+            const html = displayResults.map((r, index) => {
                 let color = '#10b981'; // 100ms以下绿色
                 if (r.time > 100 && r.time <= 200) {
                     color = '#f59e0b'; // 101~200ms黄色
@@ -12158,12 +12175,18 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     color = '#ef4444'; // 201ms以上红色
                 }
 
-                return `<div class="optimize-result-item" style="color: ${color}; font-weight: bold;">${r.ip}:${r.port}#${r.remark} ${r.type} ${r.time}ms</div>`;
+                return `<div class="optimize-result-item" style="color: ${color}; font-weight: bold; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span>${r.ip}:${r.port}#${r.remark} ${r.type} ${r.time}ms</span>
+                        <span id="ip-fraud-${country}-${index}" class="ip-fraud-badge" style="font-size: 12px; font-weight: normal; padding: 2px 6px; border-radius: 4px; background: #e5e7eb; color: #6b7280;">
+                            正在检测纯净度...
+                        </span>
+                    </div>
+                </div>`;
             }).join('');
 
             let finalHtml = html;
 
-            // 如果有更多结果且未展开，添加展开按钮
             if (!showAll && results.length > 16) {
                 finalHtml += `<div style="margin-top: 15px; text-align: center;">
                     <button type="button" class="btn btn-secondary" onclick="showCountryResults('${country}', true)" style="padding: 8px 16px; font-size: 12px;">
@@ -12173,6 +12196,53 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             }
 
             contentContainer.innerHTML = finalHtml;
+            
+            // 第二阶段：并发加载展示 IP 的纯净度数据
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 避免 ipapi.is 卡死
+            
+            await Promise.allSettled(displayResults.map(async (r, index) => {
+                const badgeEl = document.getElementById(`ip-fraud-${country}-${index}`);
+                if (!badgeEl) return;
+                
+                try {
+                    // 仅使用 16 进制 IP 或者纯 IP
+                    const cleanIp = r.ip;
+                    const response = await fetch(`https://api.ipapi.is/?q=${cleanIp}`, { signal: controller.signal });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.ipapi) {
+                            const isHosting = data.company && data.company.type === 'hosting';
+                            const fraudScore = data.risk ? data.risk.score : 0;
+                            const isAbuser = data.risk && data.risk.is_abuser;
+                            const typeStr = isHosting ? '商用机房' : '住宅宽带';
+                            const fraudStr = isAbuser ? '欺诈' : '纯净';
+                            
+                            // 纯净度样式处理
+                            let badgeStyle = '';
+                            if (isHosting || fraudScore > 50) {
+                                badgeStyle = 'background: #fef08a; color: #854d0e; border: 1px solid #fde047;';
+                            } else if (isAbuser || fraudScore > 80) {
+                                badgeStyle = 'background: #fecaca; color: #991b1b; border: 1px solid #fca5a5;';
+                            } else {
+                                badgeStyle = 'background: #bbf7d0; color: #166534; border: 1px solid #86efac;';
+                            }
+                            
+                            badgeEl.style.cssText = `font-size: 12px; font-weight: normal; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; ${badgeStyle}`;
+                            badgeEl.innerHTML = `<span title="欺诈评分(越低越好): ${fraudScore}">${typeStr} | 评分:${fraudScore}</span>`;
+                        } else {
+                            badgeEl.textContent = '数据解析失败';
+                        }
+                    } else {
+                        badgeEl.textContent = '请求频率超限';
+                    }
+                } catch (err) {
+                    badgeEl.textContent = '检测失败';
+                }
+            }));
+            
+            clearTimeout(timeoutId);
         }
 
         // 保存优选结果
