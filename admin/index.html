@@ -12277,14 +12277,25 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                             const realCountry = data.location && data.location.country_code ? data.location.country_code : '?';
                             const displayScore = typeof fraudScore === 'number' ? fraudScore.toFixed(0) : 0;
                             
+                            // 动态纠正该节点的真实物理属地名称和 Emoji（原先仅由 COLO 决定，不符合实际情况）
+                            let finalRemark = r.remark;
+                            if (realCountry !== '?') {
+                                const realFlagEmoji = getFlagEmoji(realCountry);
+                                // 正则匹配原本类似 "🇺🇸 US " 或者 "🌐 XX " 这样基于 COLO 自动生成的头部字符串
+                                const oldPrefixRegex = /^.+?\s[A-Z0-9-]+\s/;
+                                if (oldPrefixRegex.test(finalRemark)) {
+                                    finalRemark = finalRemark.replace(oldPrefixRegex, `${realFlagEmoji} ${realCountry} `);
+                                }
+                            }
+
                             // 将 IP 类型拼接到节点名称 (remark) 中，避免重复添加
                             if (!r.typeStrAppended) {
-                                r.remark = r.remark + " " + typeStr;
+                                r.remark = finalRemark + " " + typeStr;
                                 r.typeStrAppended = true;
                                 // 同步更新界面上显示的节点名称
                                 const infoSpan = document.getElementById(`ip-info-${country}-${index}`);
                                 if (infoSpan) {
-                                    infoSpan.innerText = `${r.ip}:${r.port}#${r.remark} ${r.type} ${r.time}ms`;
+                                    infoSpan.innerText = `${r.ip}:${r.port}#${r.remark} ${r.time}ms`;
                                 }
                             }
                             
