@@ -5349,7 +5349,9 @@
             <div class="error-message" id="errorMsg"></div>
 
             <div class="header">
-                <h1 class="header-title">配置管理与部署中心</h1>
+                <div class="header-title">
+                    <h1 id="pageTitle">加载中...</h1>
+                </div>
                 <div class="header-buttons">
                     <button type="button" class="btn btn-mode-toggle" id="modeToggleBtn" onclick="toggleUserMode()">🐣
                         我是小白！我想简单点！</button>
@@ -7585,7 +7587,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
         function renderUI() {
             // 标题
-            document.getElementById('pageTitle').textContent = (currentConfig.优选订阅生成?.SUBNAME || '控制台') + ' 设置页面';
+            document.getElementById('pageTitle').textContent = (currentConfig.优选订阅生成?.SUBNAME || '控制台') + ' 配置中心';
 
             // 检查 CF 使用情况并显示模块
             const cfUsageModule = document.getElementById('cfUsageModule');
