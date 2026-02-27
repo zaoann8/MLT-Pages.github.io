@@ -12230,12 +12230,11 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     
                     if (response.ok) {
                         const data = await response.json();
-                        if (data && data.ipapi) {
+                        if (data && data.ip) {
                             const isHosting = data.company && data.company.type === 'hosting';
-                            const fraudScore = data.risk ? data.risk.score : 0;
-                            const isAbuser = data.risk && data.risk.is_abuser;
+                            const fraudScore = data.risk ? data.risk.score : (data.asn && data.asn.abuser_score ? parseFloat(data.asn.abuser_score)*100 : 0);
+                            const isAbuser = (data.risk && data.risk.is_abuser) || fraudScore > 50;
                             const typeStr = isHosting ? '商用机房' : '住宅宽带';
-                            const fraudStr = isAbuser ? '欺诈' : '纯净';
                             
                             // 纯净度样式处理
                             let badgeStyle = '';
@@ -12247,6 +12246,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                                 badgeStyle = 'background: #bbf7d0; color: #166534; border: 1px solid #86efac;';
                             }
                             
+                            const displayScore = typeof fraudScore === 'number' ? fraudScore.toFixed(0) : 0;
                             badgeEl.style.cssText = `font-size: 12px; font-weight: normal; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; ${badgeStyle}`;
                             badgeEl.innerHTML = `<span title="欺诈评分(越低越好): ${fraudScore}">${typeStr} | 评分:${fraudScore}</span>`;
                         } else {
