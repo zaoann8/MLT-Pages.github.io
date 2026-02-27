@@ -5349,9 +5349,7 @@
             <div class="error-message" id="errorMsg"></div>
 
             <div class="header">
-                <div class="header-title">
-                    <h1 id="pageTitle">加载中...</h1>
-                </div>
+                <h1 class="header-title">配置管理与部署中心</h1>
                 <div class="header-buttons">
                     <button type="button" class="btn btn-mode-toggle" id="modeToggleBtn" onclick="toggleUserMode()">🐣
                         我是小白！我想简单点！</button>
@@ -7791,28 +7789,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             document.getElementById('subConfig').value = currentConfig.订阅转换配置?.SUBCONFIG || '';
             document.getElementById('emoji').checked = currentConfig.订阅转换配置?.SUBEMOJI || false;
 
-            // 消息通知设置 - 兼容两种config结构
-            // 优先读取 TG 字段，如果没有则读取 通知.Telegram
-            const telegramBotToken = currentConfig.TG?.BotToken || currentConfig.通知?.Telegram?.BotToken;
-            const telegramChatID = currentConfig.TG?.ChatID || currentConfig.通知?.Telegram?.ChatID;
-            const telegramCheckbox = document.getElementById('telegramEnabled');
-
-            // 判断TG配置是否完整（BotToken和ChatID都非null且非空字符串）
-            if (telegramBotToken && telegramChatID) {
-                // 两个都有，启用checkbox，并加载 TG.启用 的状态
-                telegramCheckbox.disabled = false;
-                telegramCheckbox.checked = currentConfig.TG?.启用 ?? false;
-                // "参数配置"按钮颜色为绿色，表示已配置
-                updateTelegramButtonStates(true);
-                // "清除配置"按钮为红色，且可点击
-            } else {
-                // 任意一个缺少，禁用checkbox
-                telegramCheckbox.disabled = true;
-                telegramCheckbox.checked = false;
-                // "参数配置"按钮颜色为默认色，表示未配置
-                updateTelegramButtonStates(false);
-                // "清除配置"按钮为灰色，且不可点击
-            }
+            // 消息通知设置（已移除该功能）
 
             modifiedSections.clear();
             resetAllButtons();
