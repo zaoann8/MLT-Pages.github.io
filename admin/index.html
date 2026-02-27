@@ -9840,81 +9840,24 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
         async function loadSubAPIList(currentValue) {
             const selectEl = document.getElementById('subAPISelect');
-            selectEl.innerHTML = '<option value="">-- 加载中，请稍候 --</option>';
-
-            try {
-                const jsonText = await fetchWithAutoMirror(
-                    'https://raw.githubusercontent.com/cmliu/cmliu/main/SUBAPI.json',
-                    'SUBAPI 列表'
-                );
-
-                const apiList = JSON.parse(jsonText);
-
-                // 清空选项
-                selectEl.innerHTML = '';
-
-                // 添加 API 列表的选项
-                apiList.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.value;
-                    option.textContent = `${item.label}[${item.value}]`;
-                    selectEl.appendChild(option);
-                });
-
-                // 添加自定义选项
-                const customOption = document.createElement('option');
-                customOption.value = 'custom';
-                customOption.textContent = '🔧 自定义';
-                selectEl.appendChild(customOption);
-
-                // 尝试匹配当前值（大小写不敏感比较）
-                if (currentValue && currentValue.trim()) {
-                    const currentValueLower = currentValue.trim().toLowerCase();
-                    const matchedOption = Array.from(selectEl.options).find(
-                        opt => opt.value.toLowerCase() === currentValueLower
-                    );
-                    if (matchedOption) {
-                        // 找到了匹配的选项
-                        selectEl.value = matchedOption.value;
-                        document.getElementById('customSubAPIInputGroup').style.display = 'none';
-                        document.getElementById('testSubAPIInput').value = '';
-                    } else {
-                        // 没有找到匹配的选项，说明是自定义的
-                        selectEl.value = 'custom';
-                        document.getElementById('testSubAPIInput').value = currentValue.trim();
-                        document.getElementById('customSubAPIInputGroup').style.display = 'block';
-                    }
-                } else {
-                    // 没有当前值，显示第一个选项
-                    selectEl.value = '';
-                    document.getElementById('customSubAPIInputGroup').style.display = 'none';
-                    document.getElementById('testSubAPIInput').value = '';
-                }
-            } catch (error) {
-                console.error('加载 SUBAPI 列表失败:', error);
-                selectEl.innerHTML = '<option value="custom">🔧 自定义</option>';
-                selectEl.value = 'custom';
-                document.getElementById('customSubAPIInputGroup').style.display = 'block';
-                if (currentValue && currentValue.trim()) {
-                    document.getElementById('testSubAPIInput').value = currentValue.trim();
-                } else {
-                    document.getElementById('testSubAPIInput').value = '';
-                }
+            selectEl.innerHTML = '<option value="custom">🔧 自定义</option>';
+            selectEl.value = 'custom';
+            
+            const customInputGroup = document.getElementById('customSubAPIInputGroup');
+            customInputGroup.style.display = 'block';
+            
+            const testInput = document.getElementById('testSubAPIInput');
+            if (currentValue && currentValue.trim()) {
+                testInput.value = currentValue.trim();
+            } else {
+                testInput.value = '';
             }
         }
 
         function handleSubAPISelectChange() {
-            const selectEl = document.getElementById('subAPISelect');
+            // 已固定为自定义模式，始终展现输入框
             const customInputGroup = document.getElementById('customSubAPIInputGroup');
-            const testInput = document.getElementById('testSubAPIInput');
-
-            if (selectEl.value === 'custom') {
-                customInputGroup.style.display = 'block';
-                testInput.focus();
-            } else {
-                customInputGroup.style.display = 'none';
-                testInput.value = selectEl.value;
-            }
+            customInputGroup.style.display = 'block';
         }
 
         // ProxyIP 帮助模态框函数
